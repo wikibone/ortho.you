@@ -57,9 +57,188 @@
             <button type="submit">Send Message</button>
         </form>
     </section>
+    import React, { useState } from 'react';
+import { 
+  LayoutDashboard, 
+  ClipboardList, 
+  Package, 
+  Users, 
+  PlusCircle, 
+  Activity,
+  LogOut
+} from 'lucide-react';
+
+// --- Types ---
+type Procedure = 'UKR' | 'TKR' | 'THR' | 'RSA' | 'Other';
+type Role = 'Observed' | 'Assisted' | 'Supervised' | 'Independent';
+
+interface CaseLog {
+  id: string;
+  patientName: string;
+  date: string;
+  role: Role;
+  procedure: Procedure;
+  type: 'Primary' | 'Revision';
+  notes: string;
+}
+
+// --- Mock Data ---
+const MOCK_CASES: CaseLog[] = [
+  { id: '1', patientName: 'John Doe', date: '2024-05-10', role: 'Independent', procedure: 'TKR', type: 'Primary', notes: 'Successful cementless fixation.' },
+  { id: '2', patientName: 'Jane Smith', date: '2024-05-12', role: 'Supervised', procedure: 'THR', type: 'Revision', notes: 'Handled acetabular bone loss.' },
+];
+
+export default function SurgeonPortal() {
+  const [view, setView] = useState<'dashboard' | 'logging' | 'inventory'>('dashboard');
+  const [cases, setCases] = useState<CaseLog[]>(MOCK_CASES);
+
+  return (
+    <div className="flex h-screen bg-gray-50 font-sans">
+      {/* Sidebar Navigation */}
+      <nav className="w-64 bg-slate-900 text-white flex flex-col">
+        <div className="p-6 text-xl font-bold border-b border-slate-800 flex items-center gap-2">
+          <Activity className="text-blue-400" /> JointRegistry
+        </div>
+        <div className="flex-1 p-4 space-y-2">
+          <NavItem active={view === 'dashboard'} onClick={() => setView('dashboard')} icon={<LayoutDashboard size={20}/>} label="Dashboard" />
+          <NavItem active={view === 'logging'} onClick={() => setView('logging')} icon={<PlusCircle size={20}/>} label="New Case Log" />
+          <NavItem active={false} onClick={() => {}} icon={<Users size={20}/>} label="Patient Records" />
+          <NavItem active={view === 'inventory'} onClick={() => setView('inventory')} icon={<Package size={20}/>} label="Inventory" />
+        </div>
+        <div className="p-4 border-t border-slate-800">
+          <button className="flex items-center gap-2 text-slate-400 hover:text-white transition">
+            <LogOut size={18}/> Logout
+          </button>
+        </div>
+      </nav>
+
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto p-8">
+        {view === 'dashboard' && <Dashboard cases={cases} />}
+        {view === 'logging' && <CaseLoggingForm onSave={(newCase) => {
+          setCases([newCase, ...cases]);
+          setView('dashboard');
+        }} />}
+      </main>
+    </div>
+  );
+}
+
+// --- Components ---
+
+function NavItem({ icon, label, active, onClick }: { icon: any, label: string, active: boolean, onClick: () => void }) {
+  return (
+    <button 
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${active ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-800'}`}
+    >
+      {icon} {label}
+    </button>
+  );
+}
+
+function Dashboard({ cases }: { cases: CaseLog[] }) {
+  return (
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-3xl font-bold text-slate-800">Practice Analytics</h1>
+        <p className="text-slate-500">Overview of surgical outcomes and volume</p>
+      </header>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard title="Total Procedures" value={cases.length.toString()} color="border-blue-500" />
+        <StatCard title="Independent Op Rate" value="84%" color="border-green-500" />
+        <StatCard title="Avg. Recovery (Days)" value="3.2" color="border-purple-500" />
+      </div>
+
+      {/* Recent Cases Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="p-6 border-b border-slate-100 font-semibold">Recent Surgical Logs</div>
+        <table className="w-full text-left">
+          <thead className="bg-slate-50 text-slate-500 text-sm uppercase">
+            <tr>
+              <th className="px-6 py-3">Patient</th>
+              <th className="px-6 py-3">Procedure</th>
+              <th className="px-6 py-3">Role</th>
+              <th className="px-6 py-3">Type</th>
+              <th className="px-6 py-3">Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {cases.map((c) => (
+              <tr key={c.id} className="hover:bg-slate-50">
+                <td className="px-6 py-4 font-medium">{c.patientName}</td>
+                <td className="px-6 py-4"><span className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold">{c.procedure}</span></td>
+                <td className="px-6 py-4 text-slate-600">{c.role}</td>
+                <td className="px-6 py-4 text-slate-600">{c.type}</td>
+                <td className="px-6 py-4 text-slate-500">{c.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CaseLoggingForm({ onSave }: { onSave: (c: CaseLog) => void }) {
+  const [formData, setFormData] = useState<Partial<CaseLog>>({
+    procedure: 'TKR',
+    role: 'Independent',
+    type: 'Primary'
+  });
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
+      <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+        <ClipboardList className="text-blue-600" /> Log New Surgery
+      </h2>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Patient Name</label>
+          <input className="w-full border p-2 rounded" onChange={e => setFormData({...formData, patientName: e.target.value})} />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Procedure</label>
+          <select className="w-full border p-2 rounded" onChange={e => setFormData({...formData, procedure: e.target.value as Procedure})}>
+            <option>UKR</option><option>TKR</option><option>THR</option><option>RSA</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Role</label>
+          <select className="w-full border p-2 rounded" onChange={e => setFormData({...formData, role: e.target.value as Role})}>
+            <option>Independent</option><option>Supervised</option><option>Assisted</option>
+          </select>
+        </div>
+        <div className="col-span-2">
+          <label className="block text-sm font-medium mb-1">Clinical Notes</label>
+          <textarea className="w-full border p-2 rounded h-32" placeholder="Detail any complications or specific implants used..." 
+            onChange={e => setFormData({...formData, notes: e.target.value})} />
+        </div>
+      </div>
+      <button 
+        onClick={() => onSave({ ...formData, id: Date.now().toString(), date: new Date().toISOString().split('T')[0] } as CaseLog)}
+        className="mt-6 w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
+      >
+        Save Case to Registry
+      </button>
+    </div>
+  );
+}
+
+function StatCard({ title, value, color }: { title: string, value: string, color: string }) {
+  return (
+    <div className={`bg-white p-6 rounded-xl border-l-4 shadow-sm ${color}`}>
+      <div className="text-sm text-slate-500 uppercase font-semibold">{title}</div>
+      <div className="text-3xl font-bold mt-1 text-slate-800">{value}</div>
+    </div>
+  );
+}
     <footer>
         <p>© 2026 Orthopaedic Surgery Clinic. All Rights Reserved.</p>
         <p><i>Medical Disclaimer: This website is intended for informational purposes only and should not be used as a substitute for professional medical advice.</i></p>
     </footer>
 </body>
 </html>
+
